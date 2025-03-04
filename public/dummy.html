@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Result Upload Request</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+
+<body>
+
+    <h2>Login</h2>
+    <form id="loginForm">
+        <label>Email:</label>
+        <input type="email" id="email" required>
+        <br>
+        <label>Password:</label>
+        <input type="password" id="password" required>
+        <br>
+        <button type="submit">Login</button>
+    </form>
+
+    <h2>Submit Result Upload Request</h2>
+    <form id="requestForm">
+        <label>Course Code:</label>
+        <input type="text" id="courseCode" required>
+        <br>
+        <label>Course Title:</label>
+        <input type="text" id="courseTitle" required>
+        <br>
+        <label>Lecturer ID:</label>
+        <input type="text" id="lecturerId" required>
+        <br>
+        <label>HOD ID:</label>
+        <input type="text" id="hodId" required>
+        <br>
+        <button type="submit">Submit Request</button>
+    </form>
+
+    <script>
+        document.getElementById("loginForm").addEventListener("submit", async function (event) {
+            event.preventDefault();
+
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+
+
+            try {
+                const response = await fetch("http://localhost:3000/login", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password }),
+                    credentials: "include"
+                });
+
+                // Handle failed responses before parsing JSON
+                if (!response.ok) {
+                    const errorText = await response.text(); // Get the error message from the server
+                    throw new Error(`Login failed: ${errorText}`);
+                }
+
+                const data = await response.json();
+                const username = data.username
+                // Store student ID and token in localStorage
+                localStorage.setItem("student_id", data.userID);
+                localStorage.setItem("token", data.token);
+                localStorage.setItem("username",username)
+
+                console.log(`welcome user :${username}`)
+
+                alert("Login successful!");
+                
+
+                setTimeout(() => {
+                    email.value = '';
+                    password.value = '';
+                }, 2000);
+                if (data.role === 'student') {
+                    window.location.href = 'student.html';
+                } else if (data.role === 'lecturer') {
+                    window.location.href = 'lecturer.html';
+                } else if (data.role === 'hod') {
+                    window.location.href = 'hod.html';
+                } else if (data.role === 'registrar') {
+                    window.location.href = 'registrar.html';
+                }
+            } catch (error) {
+                console.error("Login Error:", error.message);
+                alert("Login failed. Check credentials.");
+            }
+
+        })
+
+        document.getElementById("requestForm").addEventListener("submit", async function (event) {
+            event.preventDefault();
+
+            const studentId = localStorage.getItem("student_id");
+            if (!studentId) {
+                alert("Please log in first.");
+                return;
+            }
+
+            const courseCode = document.getElementById("courseCode").value;
+            const courseTitle = document.getElementById("courseTitle").value;
+            const lecturerId = document.getElementById("lecturerId").value;
+            const hodId = document.getElementById("hodId").value;
+
+            try {
+                const response = await axios.post("http://localhost:5000/api/requests", {
+                    student_id: studentId,
+                    course_code: courseCode,
+                    course_title: courseTitle,
+                    lecturer_id: lecturerId,
+                    hod_id: hodId
+                });
+
+                alert("Request Submitted Successfully!");
+            } catch (error) {
+                console.error("Request submission failed", error);
+                alert("Request submission failed. Check logs.");
+            }
+        });
+    </script>
+
+</body>
+
+</html>

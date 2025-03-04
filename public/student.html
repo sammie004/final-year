@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Dashboard</title>
+  <!-- Bootstrap CSS -->
+  <link 
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" 
+    rel="stylesheet" 
+    crossorigin="anonymous">
+  <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+  <link rel="icon" href="/Screenshot (125).png" type="image/x-icon">
+  
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #ffffff;
+      margin: 0;
+      padding-top: 100px; /* Accounts for fixed navbar */
+    }
+    /* Navbar customization */
+    .navbar {
+      background-color: #020167;
+      height: 92px;
+    }
+    .navbar .navbar-brand {
+      font-size: 1.5rem;
+    }
+    /* Notification styles */
+    #notifContainer {
+      position: fixed;
+      top: 70px; /* below navbar */
+      right: 10px;
+      z-index: 1050;
+      width: 300px;
+    }
+    .notification {
+      background: #007BFF;
+      color: white;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      animation: fadeIn 0.5s;
+    }
+    .notification a {
+      color: #FFD700;
+      text-decoration: underline;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .username {
+      font-size: 1.5rem;
+    }
+    /* Card button styling with hover animations */
+    .mtbutton {
+      margin-top: 15px;
+      background-color: white;
+      color: black;
+      border: 1px solid black;
+      border-radius: 8px;
+      padding: 10px 20px;
+      transition: transform 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
+    }
+    .mtbutton:hover {
+      transform: scale(1.05);
+      background-color: #000;
+      color: #fff;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+    }
+    /* Custom card styling */
+    .card-custom {
+      width: 340px;
+      height: 305px;
+      margin: 20px auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      border: 1px solid black;
+      position: relative; /* For positioning the indicator */
+    }
+    /* Row centering */
+    .row-custom {
+      justify-content: center;
+    }
+    .mb-3 {
+      font-size: 32px;
+    }
+    /* Loader styling */
+    #loader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(255, 255, 255, 0.8);
+      display: none; /* hidden by default */
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+    }
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .navbar .navbar-brand { font-size: 1.2rem; }
+      .container { flex-direction: column; }
+      .image { display: none; }
+      .main-login { width: 100%; }
+    }
+    /* Ensure container is centered */
+    .container {
+      width: 90%;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    /* Pulsing red indicator for status updates */
+    .notification-indicator {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 15px;
+      height: 15px;
+      background-color: red;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+      display: none; /* hidden by default */
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.5); opacity: 0.5; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Fixed Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">Result Upload Automation System</a>
+      <div class="d-flex">
+        <button class="btn btn-outline-light logout" type="button">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Notification Container -->
+  <div id="notifContainer"></div>
+
+  <!-- Main Content -->
+  <div class="container my-4">
+    <h1 class="mb-3">Welcome, <span class="username"></span></h1>
+    <p class="lead">Let's jump back in, shall we?</p>
+    <div class="row row-custom">
+      <!-- Card 1: Request Upload -->
+      <div class="col-md-4 d-flex justify-content-center">
+        <div class="card card-custom">
+          <p>Make a request for a result upload.</p>
+          <p>Advised to check daily for more information.</p>
+          <button class="mtbutton">
+            <a href="/results-request" class="text-decoration-none loader-link" style="color: inherit;">Request</a>
+          </button>
+        </div>
+      </div>
+      <!-- Card 2: Check Status -->
+      <div class="col-md-4 d-flex justify-content-center">
+        <div class="card card-custom" id="statusCard">
+          <!-- Pulsing red circle indicator (hidden by default) -->
+          <span class="notification-indicator" id="statusIndicator"></span>
+          <p>Check the status of your request.</p>
+          <p>Stay updated with the latest progress.</p>
+          <button class="mtbutton">
+            <a href="/request-status" class="text-decoration-none loader-link" style="color: inherit;">Status</a>
+          </button>
+        </div>
+      </div>
+      <!-- Card 3: Notifications -->
+      <div class="col-md-4 d-flex justify-content-center">
+        <div class="card card-custom">
+          <p>View your notifications.</p>
+          <p>See updates regarding your requests.</p>
+          <button class="mtbutton">
+            <a href="/notifications" class="text-decoration-none loader-link" style="color: inherit;">Notifications</a>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom JS for username, logout, and polling notifications -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const storedUsername = localStorage.getItem("username") || "Student";
+      document.querySelectorAll('.username').forEach(el => el.textContent = storedUsername);
+      
+      document.querySelector('.logout').addEventListener('click', (e) => {
+        e.preventDefault();
+        localStorage.clear();
+        window.location.href = '/login';
+      });
+      
+      // Global variable to store status notification IDs
+      let statusNotificationIds = [];
+      
+      // Poll the /notifications endpoint to check for status updates.
+      function pollNotifications() {
+        fetch('/notifications', { credentials: 'include' })
+          .then(response => response.json())
+          .then(data => {
+            // Filter notifications that mention "approved" or "rejected" (adjust as needed)
+            const statusNotifications = data.filter(notification => {
+              const msg = notification.message.toLowerCase();
+              return msg.includes('approved') || msg.includes('rejected');
+            });
+            // Store the IDs for later use
+            statusNotificationIds = statusNotifications.map(n => n.notification_id);
+            // Show or hide the pulsing red indicator based on the presence of status notifications
+            if (statusNotificationIds.length > 0) {
+              document.getElementById('statusIndicator').style.display = 'block';
+            } else {
+              document.getElementById('statusIndicator').style.display = 'none';
+            }
+          })
+          .catch(err => console.error('Error fetching notifications', err));
+      }
+      
+      // Initial poll on page load
+      pollNotifications();
+      // Continue polling every 15 seconds (adjust interval as needed)
+      setInterval(pollNotifications, 15000);
+      
+      // When the user clicks on the Status card link, mark notifications as read
+      document.querySelector('#statusCard a').addEventListener('click', () => {
+        if (statusNotificationIds.length > 0) {
+          fetch('/notifications/read', {
+            method: 'PUT',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notificationIds: statusNotificationIds })
+          })
+          .then(response => response.json())
+          .then(data => {
+            // Hide the indicator since notifications have now been viewed/marked as read
+            document.getElementById('statusIndicator').style.display = 'none';
+            // Clear stored notification IDs
+            statusNotificationIds = [];
+          })
+          .catch(err => console.error("Error marking notifications as read", err));
+        } else {
+          // If no status notifications exist, simply hide the indicator
+          document.getElementById('statusIndicator').style.display = 'none';
+        }
+      });
+    });
+  </script>
+  
+  <!-- Bootstrap Bundle with Popper -->
+  <script 
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" 
+    crossorigin="anonymous">
+  </script>
+</body>
+</html>

@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HOD Dashboard - Requests</title>
+    <link rel="icon" href="/Screenshot (125).png" type="image/x-icon" />
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"
+        crossorigin="anonymous" />
+    <style>
+        :root {
+            --primary-color: #023e8a;
+            --secondary-color: #0077b6;
+            --background-color: #f0f8ff;
+            --success-color: #27ae60;
+            --warning-color: #f1c40f;
+            --danger-color: #e74c3c;
+            --light-gray: #f8f9fa;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #e0f7fa, #e6f2ff);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .header {
+            background: var(--primary-color);
+            color: #fff;
+            padding: 20px 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            animation: fadeInDown 0.8s ease;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2rem;
+        }
+
+        .logout-btn {
+            background: var(--danger-color);
+            border: none;
+            color: #fff;
+            padding: 10px 20px;
+            font-size: 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: #c0392b;
+        }
+
+        .table-responsive {
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .requests-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .requests-table th,
+        .requests-table td {
+            padding: 1rem;
+            text-align: center;
+            vertical-align: middle;
+            border-bottom: 1px solid #e9ecef;
+            transition: background 0.3s ease;
+        }
+
+        .requests-table thead {
+            background-color: var(--primary-color);
+            color: #fff;
+        }
+
+        .requests-table tbody tr:nth-child(even) {
+            background-color: var(--light-gray);
+        }
+
+        .requests-table tbody tr:hover {
+            background-color: #dbe9f4;
+        }
+
+        .status {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 500;
+            text-transform: capitalize;
+            color: #fff;
+        }
+
+        .status.pending {
+            background-color: var(--warning-color);
+            color: #2c3e50;
+        }
+
+        .status.approved,
+        .status.lecturer_approved {
+            background-color: var(--success-color);
+        }
+
+        .status.rejected,
+        .status.lecturer_rejected {
+            background-color: var(--danger-color);
+        }
+
+        .status.hod_approved {
+            background-color: #1abc9c;
+        }
+
+        /* Modal styling */
+        .modal-content {
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header,
+        .modal-footer {
+            border: none;
+        }
+
+        .modal-title {
+            font-weight: 600;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .requests-table th,
+            .requests-table td {
+                font-size: 0.85rem;
+                padding: 0.75rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>HOD Dashboard - Requests</h1>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+
+    <div class="container">
+        <div id="requestsContainer" class="table-responsive">
+            <div class="text-center py-5">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for displaying rejection reason -->
+    <div class="modal fade" id="rejectionModal" tabindex="-1" aria-labelledby="rejectionModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="rejectionModalLabel">Rejection Reason</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="rejectionReasonContent">
+                    <!-- Rejection reason will appear here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for displaying details (if needed) -->
+    <!-- Add any additional modals here -->
+
+    <script>
+        function logout() {
+            // Clear token and redirect to login page
+            localStorage.removeItem("token");
+            window.location.href = "/login";
+        }
+
+        async function fetchHodRequests() {
+            try {
+                const token = localStorage.getItem("token");
+                if (!token) {
+                    document.getElementById("requestsContainer").innerHTML = "<p class='text-center text-danger'>Authentication token not found.</p>";
+                    return;
+                }
+                const response = await fetch("http://localhost:3000/hod-requests", {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + token
+                    },
+                    credentials: "include"
+                });
+                if (!response.ok) throw new Error("Failed to fetch HOD requests");
+                const requests = await response.json();
+                console.log("Fetched requests:", requests);
+                renderRequests(requests);
+            } catch (error) {
+                console.error("Error fetching HOD requests:", error);
+                document.getElementById("requestsContainer").innerHTML = "<p class='text-center text-danger'>Error loading requests.</p>";
+            }
+        }
+
+        function renderRequests(requests) {
+            const container = document.getElementById("requestsContainer");
+            if (requests.length === 0) {
+                container.innerHTML = "<p class='text-center'>No requests found.</p>";
+                return;
+            }
+            let html = `
+        <table class="table requests-table">
+          <thead>
+            <tr>
+              <th>Request ID</th>
+              <th>Student ID</th>
+              <th>Student Name</th>
+              <th>Course Code</th>
+              <th>Course Title</th>
+              <th>Lecturer Name</th>
+              <th>Lecturer Status</th>
+              <th>HOD Status</th>
+              <th>Submitted On</th>
+              <th>Level Taken</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+            requests.forEach(request => {
+                // If lecturer_status is "rejected", make it clickable to view the rejection reason
+                let lecturerStatusHTML = request.lecturer_status.toLowerCase() === "rejected"
+                    ? `<a href="#" class="status rejected" data-request-id="${request.request_id}" onclick="openRejectionModalFromEndpoint(this); return false;">${request.lecturer_status}</a>`
+                    : `<span class="status ${request.lecturer_status.toLowerCase()}">${request.lecturer_status}</span>`;
+                let hodStatusHTML = `<span class="status ${request.hod_status.toLowerCase()}">${request.hod_status}</span>`;
+                // Action buttons appear only when lecturer approved and HOD is pending.
+                let actionsHTML = "";
+                if (request.lecturer_status.toLowerCase() === "approved" && request.hod_status.toLowerCase() === "pending") {
+                    actionsHTML = `
+            <div class="action-buttons">
+              <button class="btn btn-success btn-sm" onclick="handleHodApprove(${request.request_id})">Approve</button>
+              <button class="btn btn-danger btn-sm" onclick="handleHodReject(${request.request_id})">Reject</button>
+            </div>
+          `;
+                }
+                html += `
+          <tr>
+            <td>#${request.request_id}</td>
+            <td>${request.student_id}</td>
+            <td>${request.student_name || "-"}</td>
+            <td>${request.course_code}</td>
+            <td>${request.course_title}</td>
+            <td>${request.lecturer_name || "-"}</td>
+            <td>${lecturerStatusHTML}</td>
+            <td>${hodStatusHTML}</td>
+            <td>${new Date(request.created_at).toLocaleDateString()}</td>
+            <td>${request.level_taken}</td>
+            <td>${actionsHTML}</td>
+          </tr>
+        `;
+            });
+            html += `
+          </tbody>
+        </table>
+      `;
+            container.innerHTML = html;
+        }
+
+        // Function to open the rejection reason modal and fetch the reason
+        async function openRejectionModalFromEndpoint(el) {
+            const requestId = el.getAttribute('data-request-id');
+            const modalBody = document.getElementById('rejectionReasonContent');
+            modalBody.textContent = 'Loading...';
+            const rejectionModal = new bootstrap.Modal(document.getElementById('rejectionModal'));
+            rejectionModal.show();
+            try {
+                const response = await fetch(`http://localhost:3000/requests/${requestId}/rejection`, {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + localStorage.getItem("token")
+                    },
+                    credentials: "include"
+                });
+                if (!response.ok) {
+                    throw new Error("Failed to fetch rejection reason");
+                }
+                const data = await response.json();
+                modalBody.textContent = data.rejection_reason || "No rejection reason provided.";
+            } catch (error) {
+                modalBody.textContent = "Error loading rejection reason.";
+            }
+        }
+
+        async function handleHodApprove(requestId) {
+            try {
+                const token = localStorage.getItem("token");
+                const response = await fetch(`http://localhost:3000/requests/${requestId}/hod-status`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + token
+                    },
+                    credentials: "include",
+                    body: JSON.stringify({ status: "approved" })
+                });
+                if (!response.ok) throw new Error("HOD approval failed");
+                fetchHodRequests();
+            } catch (error) {
+                alert("Failed to approve request");
+            }
+        }
+
+        async function handleHodReject(requestId) {
+            const rejectionReason = prompt("Enter the rejection reason:");
+            if (!rejectionReason) {
+                alert("Rejection reason is required");
+                return;
+            }
+            try {
+                const token = localStorage.getItem("token");
+                const response = await fetch(`http://localhost:3000/requests/${requestId}/hod-status`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + token
+                    },
+                    credentials: "include",
+                    body: JSON.stringify({ status: "rejected", rejectionReason })
+                });
+                if (!response.ok) throw new Error("HOD rejection failed");
+                fetchHodRequests();
+            } catch (error) {
+                alert("Failed to reject request");
+            }
+        }
+
+        window.addEventListener("load", fetchHodRequests);
+    </script>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+        crossorigin="anonymous"></script>
+</body>
+
+</html>
