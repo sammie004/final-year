@@ -13,9 +13,11 @@
         crossorigin="anonymous" />
     <style>
         :root {
-            --primary-color: #023e8a;
+            --primary-color: #00193a;
             --secondary-color: #0077b6;
-            --background-color: #f0f8ff;
+            /* --background-color: #f0f8ff; */
+            --background-color: #f5f6fa;
+
             --success-color: #27ae60;
             --warning-color: #f1c40f;
             --danger-color: #e74c3c;
@@ -24,7 +26,7 @@
 
         body {
             font-family: 'Roboto', sans-serif;
-            background: linear-gradient(135deg, #e0f7fa, #e6f2ff);
+            background-color: var(--background-color);
             margin: 0;
             padding: 20px;
         }
@@ -62,6 +64,45 @@
             background: #c0392b;
         }
 
+        .metrics {
+            margin-bottom: 30px;
+        }
+
+        /* action buttons */
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        /* metrics */
+        .metrics .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .metrics .card .card-title {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .metrics .card .card-text {
+            font-size: 1.5rem;
+            font-weight: 500;
+        }
+
         .table-responsive {
             background: #fff;
             padding: 20px;
@@ -83,6 +124,11 @@
             transition: background 0.3s ease;
         }
 
+        .modal-content {
+            text-align: center;
+            font-weight: bolder;
+        }
+
         .requests-table thead {
             background-color: var(--primary-color);
             color: #fff;
@@ -96,11 +142,25 @@
             background-color: #dbe9f4;
         }
 
+        .filter-container {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .filter-container select {
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
         .status {
             padding: 0.5rem 1rem;
             border-radius: 20px;
             font-weight: 500;
             text-transform: capitalize;
+            display: inline-block;
             color: #fff;
         }
 
@@ -109,8 +169,7 @@
             color: #2c3e50;
         }
 
-        .status.approved,
-        .status.lecturer_approved {
+        .status.approved {
             background-color: var(--success-color);
         }
 
@@ -121,22 +180,6 @@
 
         .status.hod_approved {
             background-color: #1abc9c;
-        }
-
-        /* Modal styling */
-        .modal-content {
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        }
-
-        .modal-header,
-        .modal-footer {
-            border: none;
-        }
-
-        .modal-title {
-            font-weight: 600;
         }
 
         @keyframes fadeInDown {
@@ -161,17 +204,33 @@
                 font-size: 0.85rem;
                 padding: 0.75rem;
             }
+
+            .logout-btn {
+                padding: 8px 16px;
+                font-size: 0.9rem;
+            }
         }
     </style>
 </head>
 
 <body>
     <div class="header">
-        <h1>HOD Dashboard - Requests</h1>
+        <h1>Welcome, <span class="username">Default</span></h1>
         <button class="logout-btn" onclick="logout()">Logout</button>
     </div>
-
     <div class="container">
+        <!-- Metrics Section -->
+        <div id="metricsContainer" class="row metrics"></div>
+        <!-- Filter Section -->
+        <div class="filter-container">
+            <select id="filterSelect" onchange="filterRequests()">
+                <option value="all">All Requests</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+            </select>
+        </div>
+        <!-- Requests Table -->
         <div id="requestsContainer" class="table-responsive">
             <div class="text-center py-5">
                 <div class="spinner-border" role="status">
@@ -181,7 +240,7 @@
         </div>
     </div>
 
-    <!-- Modal for displaying rejection reason -->
+    <!-- Rejection Reason Modal -->
     <div class="modal fade" id="rejectionModal" tabindex="-1" aria-labelledby="rejectionModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -193,19 +252,35 @@
                     <!-- Rejection reason will appear here -->
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                        id="close-btn">Close</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal for displaying details (if needed) -->
-    <!-- Add any additional modals here -->
+    <!-- Attachments Modal -->
+    <div id="attachmentsModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal('attachmentsModal')">&times;</span>
+            <h3>Attached Documents</h3>
+            <ul id="attachmentsList" class="file-list"></ul>
+        </div>
+    </div>
 
     <script>
+        let allRequests = [];
+        let currentRequestId = null;
+
+        // Set username from localStorage if available
+        const usernameEl = document.querySelector(".username");
+        const storedUsername = localStorage.getItem("username");
+        if (storedUsername) {
+            usernameEl.textContent = storedUsername;
+        }
+
         function logout() {
-            // Clear token and redirect to login page
-            localStorage.removeItem("token");
+            localStorage.clear();
             window.location.href = "/login";
         }
 
@@ -226,7 +301,8 @@
                 });
                 if (!response.ok) throw new Error("Failed to fetch HOD requests");
                 const requests = await response.json();
-                console.log("Fetched requests:", requests);
+                allRequests = requests;
+                renderMetrics(requests);
                 renderRequests(requests);
             } catch (error) {
                 console.error("Error fetching HOD requests:", error);
@@ -234,94 +310,135 @@
             }
         }
 
+        function renderMetrics(requests) {
+            const total = requests.length;
+            const pending = requests.filter(r => r.hod_status.toLowerCase() === "pending").length;
+            const approved = requests.filter(r => r.hod_status.toLowerCase() === "approved").length;
+            const rejected = requests.filter(r => r.hod_status.toLowerCase() === "rejected").length;
+            const metricsHTML = `
+          <div class="col-md-3 mb-3">
+            <div class="card text-center metric-card">
+              <div class="card-body">
+                <h5 class="card-title">Total Requests</h5>
+                <p class="card-text">${total}</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3 mb-3">
+            <div class="card text-center metric-card">
+              <div class="card-body">
+                <h5 class="card-title">Pending</h5>
+                <p class="card-text">${pending}</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3 mb-3">
+            <div class="card text-center metric-card">
+              <div class="card-body">
+                <h5 class="card-title">Approved</h5>
+                <p class="card-text">${approved}</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3 mb-3">
+            <div class="card text-center metric-card">
+              <div class="card-body">
+                <h5 class="card-title">Rejected</h5>
+                <p class="card-text">${rejected}</p>
+              </div>
+            </div>
+          </div>
+        `;
+            document.getElementById("metricsContainer").innerHTML = metricsHTML;
+        }
+
         function renderRequests(requests) {
             const container = document.getElementById("requestsContainer");
-            if (requests.length === 0) {
-                container.innerHTML = "<p class='text-center'>No requests found.</p>";
+            container.classList.remove("loading");
+
+            const filterValue = document.getElementById("filterSelect").value;
+            let filteredRequests = allRequests;
+            if (filterValue !== "all") {
+                filteredRequests = allRequests.filter(r => r.hod_status.toLowerCase() === filterValue);
+            }
+
+            if (filteredRequests.length === 0) {
+                container.innerHTML = `<p class='text-center'>No ${filterValue} requests found.</p>`;
                 return;
             }
-            let html = `
-        <table class="table requests-table">
-          <thead>
-            <tr>
-              <th>Request ID</th>
-              <th>Student ID</th>
-              <th>Student Name</th>
-              <th>Course Code</th>
-              <th>Course Title</th>
-              <th>Lecturer Name</th>
-              <th>Lecturer Status</th>
-              <th>HOD Status</th>
-              <th>Submitted On</th>
-              <th>Level Taken</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
-            requests.forEach(request => {
-                // If lecturer_status is "rejected", make it clickable to view the rejection reason
-                let lecturerStatusHTML = request.lecturer_status.toLowerCase() === "rejected"
-                    ? `<a href="#" class="status rejected" data-request-id="${request.request_id}" onclick="openRejectionModalFromEndpoint(this); return false;">${request.lecturer_status}</a>`
-                    : `<span class="status ${request.lecturer_status.toLowerCase()}">${request.lecturer_status}</span>`;
-                let hodStatusHTML = `<span class="status ${request.hod_status.toLowerCase()}">${request.hod_status}</span>`;
-                // Action buttons appear only when lecturer approved and HOD is pending.
-                let actionsHTML = "";
-                if (request.lecturer_status.toLowerCase() === "approved" && request.hod_status.toLowerCase() === "pending") {
-                    actionsHTML = `
-            <div class="action-buttons">
-              <button class="btn btn-success btn-sm" onclick="handleHodApprove(${request.request_id})">Approve</button>
-              <button class="btn btn-danger btn-sm" onclick="handleHodReject(${request.request_id})">Reject</button>
-            </div>
-          `;
-                }
-                html += `
-          <tr>
-            <td>#${request.request_id}</td>
-            <td>${request.student_id}</td>
-            <td>${request.student_name || "-"}</td>
-            <td>${request.course_code}</td>
-            <td>${request.course_title}</td>
-            <td>${request.lecturer_name || "-"}</td>
-            <td>${lecturerStatusHTML}</td>
-            <td>${hodStatusHTML}</td>
-            <td>${new Date(request.created_at).toLocaleDateString()}</td>
-            <td>${request.level_taken}</td>
-            <td>${actionsHTML}</td>
-          </tr>
+
+            const html = `
+          <table class="table requests-table">
+            <thead>
+              <tr>
+                <th>Request ID</th>
+                <th>Student ID</th>
+                <th>Student Name</th>
+                <th>Course Code</th>
+                <th>Course Title</th>
+                <th>Lecturer Name</th>
+                <th>Lecturer Status</th>
+                <th>HOD Status</th>
+                <th>Submitted On</th>
+                <th>Level Taken</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredRequests.map(request => `
+                <tr>
+                  <td>#${request.request_id}</td>
+                  <td>${request.student_id}</td>
+                  <td>${request.student_name || "-"}</td>
+                  <td>${request.course_code}</td>
+                  <td>${request.course_title}</td>
+                  <td>${request.lecturer_name || "-"}</td>
+                  <td>${renderStatusBadge(request)}</td>
+                  <td>${renderHodBadge(request)}</td>
+                  <td>${new Date(request.created_at).toLocaleDateString()}</td>
+                  <td>${request.level_taken}</td>
+                  <td>
+                    ${request.hod_status.toLowerCase() === 'pending' ? `
+                      <div class="action-buttons">
+                        <button class="btn btn-success btn-sm" onclick="handleHodApprove(${request.request_id})">Approve</button>
+                        <button class="btn btn-danger btn-sm" onclick="handleHodReject(${request.request_id})">Reject</button>
+                      </div>
+                    ` : ''}
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
         `;
-            });
-            html += `
-          </tbody>
-        </table>
-      `;
             container.innerHTML = html;
         }
 
-        // Function to open the rejection reason modal and fetch the reason
-        async function openRejectionModalFromEndpoint(el) {
-            const requestId = el.getAttribute('data-request-id');
-            const modalBody = document.getElementById('rejectionReasonContent');
-            modalBody.textContent = 'Loading...';
-            const rejectionModal = new bootstrap.Modal(document.getElementById('rejectionModal'));
-            rejectionModal.show();
-            try {
-                const response = await fetch(`http://localhost:3000/requests/${requestId}/rejection`, {
-                    method: "GET",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": "Bearer " + localStorage.getItem("token")
-                    },
-                    credentials: "include"
-                });
-                if (!response.ok) {
-                    throw new Error("Failed to fetch rejection reason");
-                }
-                const data = await response.json();
-                modalBody.textContent = data.rejection_reason || "No rejection reason provided.";
-            } catch (error) {
-                modalBody.textContent = "Error loading rejection reason.";
+        function renderStatusBadge(request) {
+            let status = request.lecturer_status || "pending";
+            let badgeClass = "pending";
+            if (status.toLowerCase() === "approved") {
+                badgeClass = "approved";
+            } else if (status.toLowerCase() === "rejected" || status.toLowerCase() === "lecturer_rejected") {
+                badgeClass = "rejected";
+                return `<a href="#" class="status ${badgeClass}" data-request-id="${request.request_id}" onclick="openRejectionModalFromEndpoint(this); return false;">${status.replace('_', ' ')}</a>`;
             }
+            return `<span class="status ${badgeClass}">${status.replace('_', ' ')}</span>`;
+        }
+
+        function renderHodBadge(request) {
+            let hodStatus = request.hod_status || "pending";
+            let badgeClass = "pending";
+            if (hodStatus.toLowerCase() === "approved") {
+                badgeClass = "approved";
+            } else if (hodStatus.toLowerCase() === "rejected") {
+                badgeClass = "rejected";
+                return `<a href="#" class="status ${badgeClass}" data-request-id="${request.request_id}" onclick="openRejectionModalFromEndpoint(this); return false;">${hodStatus.replace('_', ' ')}</a>`;
+            }
+            return `<span class="status ${badgeClass}">${hodStatus.replace('_', ' ')}</span>`;
+        }
+
+        function filterRequests() {
+            renderRequests(allRequests);
         }
 
         async function handleHodApprove(requestId) {
@@ -365,6 +482,66 @@
             } catch (error) {
                 alert("Failed to reject request");
             }
+        }
+
+        async function openRejectionModalFromEndpoint(el) {
+            const requestId = el.getAttribute("data-request-id");
+            const modalBody = document.getElementById("rejectionReasonContent");
+            modalBody.textContent = "Loading...";
+            const rejectionModal = new bootstrap.Modal(document.getElementById("rejectionModal"));
+            rejectionModal.show();
+            try {
+                const response = await fetch(`http://localhost:3000/requests/${requestId}/rejection`, {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + localStorage.getItem("token")
+                    },
+                    credentials: "include"
+                });
+                if (!response.ok) throw new Error("Failed to fetch rejection reason");
+                const data = await response.json();
+                modalBody.textContent = data.rejection_reason || "No rejection reason provided.";
+            } catch (error) {
+                modalBody.textContent = "Error loading rejection reason.";
+            }
+        }
+
+        async function openAttachmentsModal(requestId) {
+            const modal = document.getElementById("attachmentsModal");
+            const attachmentsList = document.getElementById("attachmentsList");
+            attachmentsList.innerHTML = "<li>Loading attachments...</li>";
+            modal.style.display = "flex";
+            try {
+                const response = await fetch(`http://localhost:3000/requests/${requestId}/files`, {
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + localStorage.getItem("token")
+                    },
+                    credentials: "include"
+                });
+                if (!response.ok) throw new Error("Failed to fetch attachments");
+                const files = await response.json();
+                if (files.length === 0) {
+                    attachmentsList.innerHTML = "<li>No attachments available.</li>";
+                } else {
+                    attachmentsList.innerHTML = files
+                        .map(file => `<li><a href="${file.file_path}" target="_blank">${file.file_name}</a></li>`)
+                        .join("");
+                }
+            } catch (error) {
+                attachmentsList.innerHTML = "<li>Error loading attachments.</li>";
+            }
+        }
+
+        function showError(message) {
+            const container = document.getElementById("requestsContainer");
+            container.innerHTML = `
+          <div class="error-message text-center" style="padding: 1rem; color: var(--danger-color);">
+            <span class="material-icons" style="vertical-align: middle;">error</span>
+            <p style="display:inline-block; margin-left: 0.5rem;">${message}</p>
+          </div>
+        `;
         }
 
         window.addEventListener("load", fetchHodRequests);

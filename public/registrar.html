@@ -1,11 +1,682 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Registrar Dashboard - Requests</title>
+    <link rel="icon" href="/Screenshot (125).png" type="image/x-icon" />
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+    <!-- box icons -->
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"
+        crossorigin="anonymous" />
+    <style>
+        :root {
+            --primary-color: #00193a;
+            --secondary-color: #0077b6;
+            --background-color: #f0f8ff;
+            --success-color: #27ae60;
+            --warning-color: #f1c40f;
+            --danger-color: #e74c3c;
+            --light-gray: #f8f9fa;
+            --background-color: #f5f6fa;
+
+        }
+
+        * {
+            box-sizing: border-box;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: var(--background-color);
+            margin: 0;
+            padding-top: 80px;
+            /* space for fixed navbar */
+        }
+
+        #files {
+            font-size: 25px;
+            color: black;
+            transition: 0.3s ease;
+        }
+
+        #files:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-content {
+            text-align: center;
+            font-weight: bolder;
+            font-size: 20px;
+        }
+
+        /* Fixed Navbar */
+        .navbar {
+            background-color: var(--primary-color);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1050;
+            padding: 10px 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            height: 60px;
+        }
+
+        .navbar h1 {
+            margin: 0;
+            color: #fff;
+            font-size: 1.8rem;
+        }
+
+        .logout-btn {
+            background: var(--danger-color);
+            border: none;
+            color: #fff;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: #c0392b;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px 15px;
+        }
+
+        /* Metrics Section */
+        .metrics-container {
+            display: flex;
+            flex-wrap: nowrap;
+            /* gap: 0.3rem; */
+            margin-bottom: 40px;
+            overflow-x: auto;
+        }
+
+        .metric-card {
+            flex: 0 0 calc(25% - 1rem);
+            background: #fff;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .metric-card .card-title {
+            font-size: 1rem;
+            margin-bottom: 0.3rem;
+            color: var(--primary-color);
+        }
+
+        .metric-card .card-text {
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+
+        /* Filter Section */
+        .filter-container {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .filter-container select {
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #fff;
+        }
+
+        /* Table Styling */
+        .table-responsive {
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
+        }
+
+        .requests-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .requests-table th,
+        .requests-table td {
+            padding: 1rem;
+            text-align: center;
+            border-bottom: 1px solid #e9ecef;
+            transition: background 0.3s ease;
+        }
+
+        .requests-table thead {
+            background-color: var(--primary-color);
+            color: #fff;
+        }
+
+        .requests-table tbody tr:nth-child(even) {
+            background-color: var(--light-gray);
+        }
+
+        .requests-table tbody tr:hover {
+            background-color: #dbe9f4;
+        }
+
+        /* Status Badges */
+        .status {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            display: inline-block;
+            text-transform: capitalize;
+            color: #fff;
+        }
+
+        .status.pending {
+            background-color: var(--warning-color);
+            color: #2c3e50;
+        }
+
+        .status.approved {
+            background-color: var(--success-color);
+        }
+
+        .status.rejected,
+        .status.lecturer_rejected {
+            background-color: var(--danger-color);
+        }
+
+        .status.registrar_pending {
+            background-color: var(--warning-color);
+            color: #2c3e50;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-approve {
+            background-color: var(--success-color);
+            color: #fff;
+        }
+
+        .btn-reject {
+            background-color: var(--danger-color);
+            color: #fff;
+        }
+
+        .attachment-icon {
+            color: var(--secondary-color);
+            cursor: pointer;
+        }
+
+        /* Modal Styles - Using Bootstrap's modal markup for reliability */
+        /* No major custom modal CSS here; we rely on Bootstrap’s classes */
+        .loading {
+            display: flex;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        #close-btn {
+            background-color: var(--danger-color);
+        }
+
+        #close-btn:hover {
+            background-color: #c0392b;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--secondary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 768px) {
+            .navbar h1 {
+                font-size: 1.5rem;
+            }
+
+            .requests-table th,
+            .requests-table td {
+                font-size: 0.85rem;
+                padding: 0.75rem;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+                gap: 0.25rem;
+            }
+
+            .metric-card {
+                flex: 0 0 calc(50% - 1rem);
+            }
+
+            .filter-container {
+                flex-direction: column;
+                align-items: flex-end;
+                gap: 0.5rem;
+            }
+        }
+    </style>
 </head>
+
 <body>
-    welcome to the registrar page
+    <!-- Fixed Navbar -->
+    <nav class="navbar">
+        <h1>Welcome, <span id="reg-username">User</span></h1>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </nav>
+
+    <div class="container">
+        <!-- Metrics Section -->
+        <div id="metricsContainer" class="row metrics-container"></div>
+
+        <!-- Filter Section -->
+        <div class="filter-container">
+            <select id="filterStatus" onchange="filterRequests()">
+                <option value="all">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+            </select>
+            <select id="filterDepartment" onchange="filterRequests()">
+                <option value="all">All Departments</option>
+                <option value="Computer Science">Computer Science</option>
+                <option value="Engineering">Engineering</option>
+                <option value="Business">Business</option>
+                <option value="Arts">Arts</option>
+                <option value="Medicine">Medicine</option>
+                <option value="Software Engineering">Software Engineering</option>
+            </select>
+        </div>
+
+        <!-- Requests Table -->
+        <div id="requestsContainer" class="table-responsive loading">
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <!-- Rejection Reason Modal (Bootstrap Modal Structure) -->
+    <div class="modal fade" id="rejectionModal" tabindex="-1" aria-labelledby="rejectionModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content p-4">
+                <div class="modal-header border-bottom pb-2">
+                    <h5 class="modal-title" id="rejectionModalLabel">Rejection Reason</h5>
+                    <!-- <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> -->
+                </div>
+                <div class="modal-body" id="rejectionReasonContent">
+                    <!-- Rejection reason will appear here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                        id="close-btn">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attachments Modal (Bootstrap Modal Structure) -->
+    <div class="modal fade" id="attachmentsModal" tabindex="-1" aria-labelledby="attachmentsModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content p-4 shadow-sm">
+                <div class="modal-header border-bottom pb-2">
+                    <h5 class="modal-title" id="attachmentsModalLabel">Attached Documents</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <ul id="attachmentsList" class="list-unstyled"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Set the registrar username in navbar
+        const regUsernameEl = document.getElementById("reg-username");
+        const regStoredUsername = localStorage.getItem("username");
+        if (regStoredUsername) {
+            regUsernameEl.textContent = regStoredUsername;
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = "/login";
+        }
+
+        // Global variables
+        let allRequests = [];
+        let currentRequestId = null;
+
+        async function fetchRegistrarRequests() {
+            try {
+                const token = localStorage.getItem("token");
+                if (!token) {
+                    document.getElementById("requestsContainer").innerHTML =
+                        "<p class='text-center text-danger'>Authentication token not found.</p>";
+                    return;
+                }
+                const response = await fetch("http://localhost:3000/registrar-requests", {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + token
+                    },
+                    credentials: "include"
+                });
+                if (!response.ok) throw new Error("Failed to fetch registrar requests");
+                const requests = await response.json();
+                allRequests = requests;
+                renderMetrics(requests);
+                renderRequests(requests);
+            } catch (error) {
+                console.error("Error fetching registrar requests:", error);
+                document.getElementById("requestsContainer").innerHTML =
+                    "<p class='text-center text-danger'>Error loading requests.</p>";
+            }
+        }
+
+        function renderMetrics(requests) {
+            const total = requests.length;
+            const pending = requests.filter(r => r.registrar_status.toLowerCase() === "pending").length;
+            const approved = requests.filter(r => r.registrar_status.toLowerCase() === "approved").length;
+            const rejected = requests.filter(r => r.registrar_status.toLowerCase() === "rejected").length;
+            const metricsHTML = `
+          <div class="col-md-3 mb-3">
+            <div class="card text-center metric-card">
+              <div class="card-body">
+                <h5 class="card-title">Total Requests</h5>
+                <p class="card-text">${total}</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3 mb-3">
+            <div class="card text-center metric-card">
+              <div class="card-body">
+                <h5 class="card-title">Pending</h5>
+                <p class="card-text">${pending}</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3 mb-3">
+            <div class="card text-center metric-card">
+              <div class="card-body">
+                <h5 class="card-title">Approved</h5>
+                <p class="card-text">${approved}</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3 mb-3">
+            <div class="card text-center metric-card">
+              <div class="card-body">
+                <h5 class="card-title">Rejected</h5>
+                <p class="card-text">${rejected}</p>
+              </div>
+            </div>
+          </div>
+        `;
+            document.getElementById("metricsContainer").innerHTML = metricsHTML;
+        }
+
+        function renderRequests(requests) {
+            const container = document.getElementById("requestsContainer");
+            container.classList.remove("loading");
+
+            const statusFilter = document.getElementById("filterStatus").value;
+            const deptFilter = document.getElementById("filterDepartment").value;
+            let filteredRequests = allRequests;
+            if (statusFilter !== "all") {
+                filteredRequests = filteredRequests.filter(r => r.registrar_status.toLowerCase() === statusFilter);
+            }
+            if (deptFilter !== "all") {
+                filteredRequests = filteredRequests.filter(r => r.department && r.department.toLowerCase() === deptFilter.toLowerCase());
+            }
+            if (filteredRequests.length === 0) {
+                container.innerHTML = `<p class='text-center'>No ${statusFilter} requests found.</p>`;
+                return;
+            }
+
+            const html = `
+          <table class="table requests-table">
+            <thead>
+              <tr>
+                <th>Request ID</th>
+                <th>Student ID</th>
+                <th>Student Name</th>
+                <th>Department</th>
+                <th>Course Code</th>
+                <th>Course Title</th>
+                <th>Lecturer Name</th>
+                <th>Registrar Status</th>
+                <th>Attachments</th>
+                <th>Submitted On</th>
+                <th>Level Taken</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredRequests.map(request => `
+                <tr>
+                  <td>#${request.request_id}</td>
+                  <td>${request.student_id}</td>
+                  <td>${request.student_name || "-"}</td>
+                  <td>${request.department || "-"}</td>
+                  <td>${request.course_code}</td>
+                  <td>${request.course_title}</td>
+                  <td>${request.lecturer_name || "-"}</td>
+                  <td>${renderStatusBadge(request)}</td>
+                  <td>
+                    <a href="#" class="attachment-icon" onclick="openAttachmentsModal(${request.request_id}); return false;">
+                      <i class='bx bxs-file-archive' id="files"></i>
+                    </a>
+                  </td>
+                  <td>${new Date(request.created_at).toLocaleDateString()}</td>
+                  <td>${request.level_taken}</td>
+                  <td>
+                    ${request.registrar_status.toLowerCase() === 'pending' ? `
+                      <div class="action-buttons">
+                        <button class="btn btn-success btn-sm" onclick="handleRegistrarApprove(${request.request_id})">
+                          <span class="material-icons">check</span> Approve
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="handleRegistrarReject(${request.request_id})">
+                          <span class="material-icons">close</span> Reject
+                        </button>
+                      </div>
+                    ` : ''}
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
+            container.innerHTML = html;
+        }
+
+        function renderStatusBadge(request) {
+            let status = request.registrar_status || "pending";
+            let badgeClass = "pending";
+            if (status.toLowerCase() === "approved") {
+                badgeClass = "approved";
+            } else if (status.toLowerCase() === "rejected") {
+                badgeClass = "rejected";
+                return `<a href="#" class="status ${badgeClass}" data-request-id="${request.request_id}" onclick="openRejectionModalFromEndpoint(this); return false;">${status.replace('_', ' ')}</a>`;
+            }
+            return `<span class="status ${badgeClass}">${status.replace('_', ' ')}</span>`;
+        }
+
+        function filterRequests() {
+            renderRequests(allRequests);
+        }
+
+        async function handleRegistrarApprove(requestId) {
+            try {
+                const token = localStorage.getItem("token");
+                const response = await fetch(`http://localhost:3000/requests/${requestId}/registrar-status`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + token
+                    },
+                    credentials: "include",
+                    body: JSON.stringify({ status: "approved" })
+                });
+                if (!response.ok) throw new Error("Registrar approval failed");
+                fetchRegistrarRequests();
+            } catch (error) {
+                alert("Failed to approve request");
+            }
+        }
+
+        async function handleRegistrarReject(requestId) {
+            const rejectionReason = prompt("Enter the rejection reason:");
+            if (!rejectionReason) {
+                alert("Rejection reason is required");
+                return;
+            }
+            try {
+                const token = localStorage.getItem("token");
+                const response = await fetch(`http://localhost:3000/requests/${requestId}/registrar-status`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + token
+                    },
+                    credentials: "include",
+                    body: JSON.stringify({ status: "rejected", rejectionReason })
+                });
+                if (!response.ok) throw new Error("Registrar rejection failed");
+                fetchRegistrarRequests();
+            } catch (error) {
+                alert("Failed to reject request");
+            }
+        }
+
+        async function openRejectionModalFromEndpoint(el) {
+            const requestId = el.getAttribute("data-request-id");
+            const modalBody = document.getElementById("rejectionReasonContent");
+            modalBody.textContent = "Loading...";
+            const rejectionModal = new bootstrap.Modal(document.getElementById("rejectionModal"));
+            rejectionModal.show();
+            try {
+                const response = await fetch(`http://localhost:3000/requests/${requestId}/rejection`, {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + localStorage.getItem("token")
+                    },
+                    credentials: "include"
+                });
+                if (!response.ok) throw new Error("Failed to fetch rejection reason");
+                const data = await response.json();
+                modalBody.textContent = data.rejection_reason || "No rejection reason provided.";
+            } catch (error) {
+                modalBody.textContent = "Error loading rejection reason.";
+            }
+        }
+
+        async function openAttachmentsModal(requestId) {
+            const modal = document.getElementById("attachmentsModal");
+            const attachmentsList = document.getElementById("attachmentsList");
+            attachmentsList.innerHTML = '<li>Loading attachments...</li>';
+            const modalInstance = new bootstrap.Modal(document.getElementById("attachmentsModal"));
+            modalInstance.show();
+            try {
+                const response = await fetch(`http://localhost:3000/requests/${requestId}/files`, {
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + localStorage.getItem("token")
+                    },
+                    credentials: "include"
+                });
+                if (!response.ok) throw new Error("Failed to fetch attachments");
+                const files = await response.json();
+                if (files.length === 0) {
+                    attachmentsList.innerHTML = '<li>No attachments available.</li>';
+                } else {
+                    attachmentsList.innerHTML = files
+                        .map(file => `<li><a href="${file.file_path}" target="_blank">${file.file_name}</a></li>`)
+                        .join('');
+                }
+            } catch (error) {
+                attachmentsList.innerHTML = '<li>Error loading attachments.</li>';
+            }
+        }
+
+        function showError(message) {
+            const container = document.getElementById("requestsContainer");
+            container.innerHTML = `
+          <div class="error-message text-center" style="padding: 1rem; color: var(--danger-color);">
+            <span class="material-icons" style="vertical-align: middle;">error</span>
+            <p style="display:inline-block; margin-left: 0.5rem;">${message}</p>
+          </div>
+        `;
+        }
+
+        window.addEventListener("load", fetchRegistrarRequests);
+    </script>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+        crossorigin="anonymous"></script>
 </body>
+
 </html>

@@ -271,6 +271,141 @@ app.get('/lecturers', (req, res) => {
     res.status(200).json(results);
   });
 });
+// registrars dashboard
+// GET /registrar-requests - Fetch requests that have been approved by HODs
+app.get('/registrar-requests', authenticateToken, authorizeRoles(['registrar']), (req, res) => {
+  const query = `
+    SELECT 
+      r.request_id,
+      r.student_id,
+      s.username AS student_name,
+      s.department,
+      r.course_code,
+      r.course_title,
+      r.lecturer_id,
+      l.username AS lecturer_name,
+      r.registrar_status,
+      r.created_at,
+      r.level_taken,
+      r.rejection_reason
+    FROM requests r
+    JOIN users s ON r.student_id = s.user_id
+    JOIN users l ON r.lecturer_id = l.user_id
+    WHERE r.hod_status = 'approved'
+    ORDER BY r.created_at DESC
+  `;
+  new_connection.query(query, (err, results) => {
+    if (err) {
+      console.error("Error fetching registrar requests:", err);
+      return res.status(500).json({ message: "Server error" });
+    }
+    res.status(200).json(results);
+  });
+});
+
+// PUT /requests/:id/registrar-status - Registrar updates the request status
+app.put('/requests/:id/registrar-status', authenticateToken, authorizeRoles(['registrar']), (req, res) => {
+  const requestId = req.params.id;
+  let { status, rejectionReason } = req.body;
+  const validStatuses = ['approved', 'rejected'];
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({ message: "Invalid status value" });
+  }
+  if (status === 'rejected' && (!rejectionReason || rejectionReason.trim() === '')) {
+    return res.status(400).json({ message: "Rejection reason is required" });
+  }
+  rejectionReason = status === 'rejected' ? rejectionReason.trim() : null;
+
+  let updateQuery, params;
+  if (status === 'approved') {
+    updateQuery = `
+      UPDATE requests 
+      SET registrar_status = 'approved', rejection_reason = NULL
+      WHERE request_id = ?`;
+    params = [requestId];
+  } else if (status === 'rejected') {
+    updateQuery = `
+      UPDATE requests 
+      SET registrar_status = 'rejected', rejection_reason = ?
+      WHERE request_id = ?`;
+    params = [rejectionReason, requestId];
+  }
+
+  new_connection.query(updateQuery, params, (err, result) => {
+    if (err) {
+      console.error("Error updating registrar status:", err);
+      return res.status(500).json({ message: "Server error" });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Request not found" });
+    }
+    // Retrieve additional info to send notifications
+    const getQuery = "SELECT student_id, course_title FROM requests WHERE request_id = ?";
+    new_connection.query(getQuery, [requestId], (err2, results2) => {
+      if (err2) {
+        console.error("Error retrieving request details:", err2);
+        return res.status(200).json({ message: "Registrar status updated" });
+      }
+      if (results2.length > 0) {
+        const studentId = results2[0].student_id;
+        const courseTitle = results2[0].course_title;
+        const notificationMessage = status === 'approved'
+          ? "Your request has been approved by the registrar."
+          : `Your request was rejected by the registrar. Reason: ${rejectionReason}`;
+        
+        // Send notification
+        addNotification(studentId, requestId, notificationMessage);
+        io.to(`user_${studentId}`).emit('notification', { userId: studentId, message: notificationMessage });
+        
+        // Optionally, send an email notification to the student.
+        const getStudentEmailQuery = "SELECT email, username FROM users WHERE user_id = ?";
+        new_connection.query(getStudentEmailQuery, [studentId], (err3, results3) => {
+          if (err3) {
+            console.error("Error fetching student email:", err3);
+          } else if (results3.length > 0) {
+            const studentEmail = results3[0].email;
+            const studentName = results3[0].username;
+            let mailOptions;
+            if (status === 'approved') {
+              // Send a formal email for approved requests.
+              mailOptions = {
+                from: process.env.EMAIL_FROM,
+                to: studentEmail,
+                subject: "Your Request Has Been Approved",
+                text: `Dear ${studentName},
+                We are pleased to inform you that your request for "${courseTitle}" has been approved by the registrar.\nPlease log in to the system and continue to check your UMIS page.\nIf the result isnt uploaded in the next couple of days go to the registry to find out the status of your upload.
+                Thank you for using the RUAS system.
+                Best regards,
+                The RUAS Team`
+              };
+            } else {
+              // Send email for rejected requests.
+              mailOptions = {
+                from: process.env.EMAIL_FROM,
+                to: studentEmail,
+                subject: "Request Status Update",
+                text: `Hello ${studentName},
+               Your request for "${courseTitle}" has been rejected by the registrar.
+               Reason: ${rejectionReason}
+              Please log in to your account for further details.
+              Best regards,
+              The RUAS Team`
+              };
+            }
+            transporter.sendMail(mailOptions, (error, info) => {
+              if (error) {
+                console.error("Error sending email to student:", error);
+              } else {
+                console.log("Email sent to student:", info.response);
+              }
+            });
+          }
+        });
+      }
+      return res.status(200).json({ message: "Registrar status updated successfully" });
+    });
+  });
+});
 
 // Result request route - auto-fetch hod_id based on student's department and send emails to both lecturer and hod.
 app.post('/requests', (req, res) => {
@@ -343,7 +478,7 @@ app.post('/requests', (req, res) => {
           from: process.env.EMAIL_FROM,
           to: hodEmail,
           subject: "New Request Notification",
-          text: `Hi ${hodName},\n\nA new result upload request for ${course_title} has been submitted and approved by the lecturer. Please log in to your dashboard to review the request.\n\nThank you,\nThe RUAS Team`
+          text: `Hi ${hodName},\n\nA new result upload request for ${course_title} has been submitted and is waiting approval by the lecturer. Please log in to your dashboard to view the request.\n\nThank you,\nThe RUAS Team`
         };
         transporter.sendMail(mailOptionsHod, (error, info) => {
           if (error) {
@@ -454,13 +589,12 @@ app.put('/requests/:id/status', authenticateToken, authorizeRoles(['lecturer']),
   if (status === 'lecturer_rejected') {
     status = 'rejected';
   }
-  
+
   const validStatuses = ['approved', 'rejected'];
   if (!validStatuses.includes(status)) {
     console.log("Invalid status value:", status);
     return res.status(400).json({ message: "Invalid status value" });
   }
-  
   // For rejection, ensure a rejection reason is provided
   if (status === 'rejected' && (!rejectionReason || rejectionReason.trim() === '')) {
     console.log("Rejection reason missing or empty");
@@ -494,7 +628,8 @@ app.put('/requests/:id/status', authenticateToken, authorizeRoles(['lecturer']),
       return res.status(404).json({ message: "Request not found" });
     }
     
-    const getQuery = "SELECT student_id, course_title FROM requests WHERE request_id = ?";
+    // Modify getQuery to also fetch hod_id
+    const getQuery = "SELECT student_id, course_title, hod_id FROM requests WHERE request_id = ?";
     new_connection.query(getQuery, [requestId], (err2, results2) => {
       if (err2) {
         console.error("Error retrieving request details:", err2);
@@ -503,6 +638,7 @@ app.put('/requests/:id/status', authenticateToken, authorizeRoles(['lecturer']),
       if (results2.length > 0) {
         const studentId = results2[0].student_id;
         const courseTitle = results2[0].course_title;
+        const hodId = results2[0].hod_id;
         let notificationMessage;
         if (status === 'approved') {
           notificationMessage = "Your request has been approved by the lecturer. It is now awaiting HOD review.";
@@ -513,6 +649,7 @@ app.put('/requests/:id/status', authenticateToken, authorizeRoles(['lecturer']),
         addNotification(studentId, requestId, notificationMessage);
         io.to(`user_${studentId}`).emit('notification', { userId: studentId, message: notificationMessage });
         
+        // Send email to student
         const getStudentEmailQuery = "SELECT email, username FROM users WHERE user_id = ?";
         new_connection.query(getStudentEmailQuery, [studentId], (err3, results3) => {
           if (err3) {
@@ -520,7 +657,7 @@ app.put('/requests/:id/status', authenticateToken, authorizeRoles(['lecturer']),
           } else if (results3.length > 0) {
             const studentEmail = results3[0].email;
             const studentName = results3[0].username;
-            const mailOptions = {
+            const mailOptionsStudent = {
               from: process.env.EMAIL_FROM,
               to: studentEmail,
               subject: "Request Status Update",
@@ -530,7 +667,7 @@ app.put('/requests/:id/status', authenticateToken, authorizeRoles(['lecturer']),
                   : 'rejected by the lecturer. Reason: ' + rejectionReasonValue
               }.\n\nPlease log in to your account for further details.\n\nBest regards,\nThe RUAS Team`
             };
-            transporter.sendMail(mailOptions, (error, info) => {
+            transporter.sendMail(mailOptionsStudent, (error, info) => {
               if (error) {
                 console.error("Error sending email to student:", error);
               } else {
@@ -539,11 +676,41 @@ app.put('/requests/:id/status', authenticateToken, authorizeRoles(['lecturer']),
             });
           }
         });
+
+        // If approved, send email and notification to HOD
+        if (status === 'approved') {
+          const getHodEmailQuery = "SELECT email, username FROM users WHERE user_id = ?";
+          new_connection.query(getHodEmailQuery, [hodId], (err4, results4) => {
+            if (err4) {
+              console.error("Error fetching HOD email:", err4);
+            } else if (results4.length > 0) {
+              const hodEmail = results4[0].email;
+              const hodName = results4[0].username;
+              const mailOptionsHod = {
+                from: process.env.EMAIL_FROM,
+                to: hodEmail,
+                subject: "New Request Awaiting Your Review",
+                text: `Hello ${hodName},\n\nA new request for ${courseTitle} has been approved by the lecturer and is now awaiting your review.\n\nPlease log in to your dashboard to take action.\n\nBest regards,\nThe RUAS Team`
+              };
+              transporter.sendMail(mailOptionsHod, (error, info) => {
+                if (error) {
+                  console.error("Error sending email to HOD:", error);
+                } else {
+                  console.log("Email sent to HOD:", info.response);
+                }
+              });
+              // Also, add a notification for the HOD if desired
+              addNotification(hodId, requestId, "A new request has been approved by the lecturer and is awaiting your review.");
+              io.to(`user_${hodId}`).emit('notification', { userId: hodId, message: "A new request has been approved by the lecturer and is awaiting your review." });
+            }
+          });
+        }
       }
       return res.status(200).json({ message: "Lecturer status updated successfully" });
     });
   });
 });
+
 
 
 // PUT /requests/:id/hod-status - HOD endpoint to update hod_status
@@ -1000,7 +1167,9 @@ app.get('/loading', (req, res) => {
 app.get('/hod-dashboard',authenticateToken,authorizeRoles(['hod']),(req,res)=>{
   res.sendFile(path.join(__dirname,'public','hod.html'))
 })
-
+app.get('/registry-dashboard',authenticateToken,authorizeRoles(['registrar']),(req,res)=>{
+  res.sendFile(path.join(__dirname,'public','registrar.html'))
+})
 // Start the server using our HTTP server (with Socket.IO)
 server.listen(process.env.PORT, () => {
   console.log(`The app is running on port ${process.env.PORT}`);

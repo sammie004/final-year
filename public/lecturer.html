@@ -5,8 +5,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Lecturer Dashboard</title>
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <link rel="icon" href="/Screenshot (125).png" type="image/x-icon">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+  <link rel="icon" href="/Screenshot (125).png" type="image/x-icon" />
   <style>
     :root {
       --primary-color: #2c3e50;
@@ -16,6 +16,10 @@
       --warning-color: #f1c40f;
       --danger-color: #e74c3c;
       --light-gray: #f8f9fa;
+    }
+
+    * {
+      box-sizing: border-box;
     }
 
     body {
@@ -32,22 +36,94 @@
     }
 
     .header {
-      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-      color: white;
-      padding: 2rem;
+      background: var(--primary-color);
+      color: #fff;
+      padding: 20px 30px;
       border-radius: 10px;
-      margin-bottom: 2rem;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      margin-bottom: 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      animation: fadeInDown 0.8s ease;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 2rem;
+    }
+
+    .logout-btn {
+      background: var(--danger-color);
+      border: none;
+      color: #fff;
+      padding: 10px 20px;
+      top: 35%;
+      font-size: 1rem;
+      border-radius: 5px;
+      height: 50px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    .logout-btn:hover {
+      background: #c0392b;
+    }
+
+    /* Metrics Section */
+    .metrics-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 20px;
+    }
+
+    .metric-card {
+      flex: 1 1 calc(25% - 1rem);
+      min-width: 100px;
+      background: #fff;
+      padding: 0.8rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
       text-align: center;
+    }
+
+    .metric-card .card-title {
+      font-size: 0.9rem;
+      margin-bottom: 0.3rem;
+    }
+
+    .metric-card .card-text {
+      font-size: 1.1rem;
+      font-weight: 500;
+    }
+
+    /* Filter Dropdown */
+    .filter-container {
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .filter-container select {
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    /* Table Styling */
+    .table-responsive {
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      overflow-x: auto;
     }
 
     .requests-table {
       width: 100%;
       border-collapse: collapse;
-      background: white;
-      border-radius: 10px;
-      overflow: hidden;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
     }
 
     .requests-table th,
@@ -59,7 +135,7 @@
 
     .requests-table thead {
       background-color: var(--primary-color);
-      color: white;
+      color: #fff;
     }
 
     .requests-table tbody tr:nth-child(even) {
@@ -70,13 +146,15 @@
       background-color: #f1f2f6;
     }
 
+    /* Status Badges */
     .status {
       padding: 0.5rem 1rem;
       border-radius: 20px;
       font-size: 0.9rem;
       font-weight: 500;
-      text-align: center;
       display: inline-block;
+      text-transform: capitalize;
+      color: #fff;
     }
 
     .status.pending {
@@ -86,15 +164,14 @@
 
     .status.approved {
       background-color: var(--success-color);
-      color: white;
     }
 
     .status.rejected,
     .status.lecturer_rejected {
       background-color: var(--danger-color);
-      color: white;
     }
 
+    /* Action Buttons */
     .action-buttons {
       display: flex;
       gap: 0.5rem;
@@ -206,19 +283,30 @@
       }
     }
 
+    /* Responsive adjustments */
     @media (max-width: 768px) {
-      .header {
+      .header h1 {
         font-size: 1.5rem;
       }
 
       .requests-table th,
       .requests-table td {
         font-size: 0.9rem;
+        padding: 0.75rem;
       }
 
       .action-buttons {
         flex-direction: column;
         gap: 0.25rem;
+      }
+
+      .metrics-container {
+        flex-direction: column;
+        gap: 1rem;
+      }
+
+      .metric-card {
+        flex: 1 1 100%;
       }
     }
   </style>
@@ -227,11 +315,25 @@
 <body>
   <div class="container">
     <div class="header">
-      <h1>Lecturer Dashboard</h1>
-      <p>Review and manage student requests</p>
+      <h1>Hello, <span class="username">Default</span></h1>
+      <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+    <!-- Metrics Section -->
+    <div id="metricsContainer" class="metrics-container"></div>
+
+    <!-- Filter Dropdown -->
+    <!-- <label for="filter">filer by</label> -->
+    <div class="filter-container">
+      <select id="filterSelect" onchange="filterRequests()">
+        <option value="all">All Requests</option>
+        <option value="pending">Pending</option>
+        <option value="approved">Approved</option>
+        <option value="rejected">Rejected</option>
+      </select>
     </div>
 
-    <div id="requestsContainer" class="loading">
+    <!-- Requests Table -->
+    <div id="requestsContainer" class="table-responsive loading">
       <div class="spinner"></div>
     </div>
   </div>
@@ -260,7 +362,20 @@
   </div>
 
   <script>
+    let allRequests = [];
     let currentRequestId = null;
+
+    const username = document.querySelector('.username');
+    username.textContent = localStorage.getItem('username');
+
+    function logout() {
+      localStorage.removeItem('username')
+      localStorage.removeItem('token')
+      localStorage.removeItem('role')
+      localStorage.removeItem('UserID')
+      localStorage.removeItem('Department')
+      window.location.href = '/login'
+    }
 
     async function fetchLecturerRequests() {
       try {
@@ -272,6 +387,8 @@
         });
         if (!response.ok) throw new Error("Failed to fetch requests");
         const requests = await response.json();
+        allRequests = requests;
+        renderMetrics(requests);
         renderRequests(requests);
       } catch (error) {
         console.error("Error:", error);
@@ -279,73 +396,114 @@
       }
     }
 
+    function renderMetrics(requests) {
+      const total = requests.length;
+      const pending = requests.filter(r => r.status.toLowerCase() === "pending").length;
+      const approved = requests.filter(r => r.status.toLowerCase() === "approved").length;
+      const rejected = requests.filter(r => r.status.toLowerCase() === "rejected" || r.status.toLowerCase() === "lecturer_rejected").length;
+      const metricsHTML = `
+          <div class="metric-card">
+            <h5 class="card-title">Total Requests</h5>
+            <p class="card-text">${total}</p>
+          </div>
+          <div class="metric-card">
+            <h5 class="card-title">Pending</h5>
+            <p class="card-text">${pending}</p>
+          </div>
+          <div class="metric-card">
+            <h5 class="card-title">Approved</h5>
+            <p class="card-text">${approved}</p>
+          </div>
+          <div class="metric-card">
+            <h5 class="card-title">Rejected</h5>
+            <p class="card-text">${rejected}</p>
+          </div>
+        `;
+      document.getElementById("metricsContainer").innerHTML = metricsHTML;
+    }
+
     function renderRequests(requests) {
       const container = document.getElementById("requestsContainer");
       container.classList.remove("loading");
 
-      if (requests.length === 0) {
-        container.innerHTML = `<p>No pending requests found.</p>`;
+      const filterValue = document.getElementById("filterSelect").value;
+      let filteredRequests = requests;
+      if (filterValue !== "all") {
+        filteredRequests = requests.filter(r => r.status.toLowerCase() === filterValue);
+      }
+
+      if (filteredRequests.length === 0) {
+        container.innerHTML = `<p class='text-center'>No ${filterValue} requests found.</p>`;
         return;
       }
 
       const html = `
-        <table class="requests-table">
-          <thead>
-            <tr>
-              <th>Request ID</th>
-              <th>Student</th>
-              <th>Course</th>
-              <th>Status</th>
-              <th>Attachments</th>
-              <th>Submitted</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${requests.map(request => `
+          <table class="requests-table">
+            <thead>
               <tr>
-                <td>#${request.request_id}</td>
-                <td>Student ${request.student_id}</td>
-                <td>
-                  <strong>${request.course_code}</strong><br>
-                  ${request.course_title}
-                </td>
-                <td>
-                  <span class="status ${request.status.toLowerCase()}">
-                    ${request.status.replace('_', ' ')}
-                  </span>
-                  ${request.rejection_reason ? `
-                    <div class="rejection-reason" style="margin-top: 5px;">
-                      <strong>Reason:</strong> ${request.rejection_reason}
-                    </div>
-                  ` : ''}
-                </td>
-                <td>
-                  <a href="#" class="attachment-icon" onclick="openAttachmentsModal(${request.request_id}); return false;">
-                    <span class="material-icons">attach_file</span>
-                  </a>
-                </td>
-                <td>${new Date(request.created_at).toLocaleDateString()}</td>
-                <td>
-                  ${request.status === 'pending' ? `
-                    <div class="action-buttons">
-                      <button class="btn btn-approve" onclick="handleApprove(${request.request_id})">
-                        <span class="material-icons">check</span>
-                        Approve
-                      </button>
-                      <button class="btn btn-reject" onclick="openRejectModal(${request.request_id})">
-                        <span class="material-icons">close</span>
-                        Reject
-                      </button>
-                    </div>
-                  ` : ''}
-                </td>
+                <th>Request ID</th>
+                <th>Student</th>
+                <th>Course</th>
+                <th>Status</th>
+                <th>Attachments</th>
+                <th>Submitted</th>
+                <th>Actions</th>
               </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      `;
+            </thead>
+            <tbody>
+              ${filteredRequests.map(request => `
+                <tr>
+                  <td>#${request.request_id}</td>
+                  <td>Student ${request.student_id}</td>
+                  <td>
+                    <strong>${request.course_code}</strong><br>
+                    ${request.course_title}
+                  </td>
+                  <td>
+                    ${renderStatusBadge(request)}
+                  </td>
+                  <td>
+                    <a href="#" class="attachment-icon" onclick="openAttachmentsModal(${request.request_id}); return false;">
+                      <span class="material-icons">attach_file</span>
+                    </a>
+                  </td>
+                  <td>${new Date(request.created_at).toLocaleDateString()}</td>
+                  <td>
+                    ${request.status.toLowerCase() === 'pending' ? `
+                      <div class="action-buttons">
+                        <button class="btn btn-approve" onclick="handleApprove(${request.request_id})">
+                          <span class="material-icons">check</span>
+                          Approve
+                        </button>
+                        <button class="btn btn-reject" onclick="openRejectModal(${request.request_id})">
+                          <span class="material-icons">close</span>
+                          Reject
+                        </button>
+                      </div>
+                    ` : ''}
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
       container.innerHTML = html;
+    }
+
+    function renderStatusBadge(request) {
+      let status = request.status || "pending";
+      let badgeClass = "pending";
+      if (status.toLowerCase() === "approved") {
+        badgeClass = "approved";
+      } else if (status.toLowerCase() === "rejected" || status.toLowerCase() === "lecturer_rejected") {
+        badgeClass = "rejected";
+        return `<a href="#" class="status ${badgeClass}" data-request-id="${request.request_id}" onclick="openRejectionModalFromEndpoint(this); return false;">${status.replace('_', ' ')}</a>`;
+      }
+      return `<span class="status ${badgeClass}">${status.replace('_', ' ')}</span>`;
+    }
+
+    function filterRequests() {
+      renderRequests(allRequests);
     }
 
     async function handleApprove(requestId) {
@@ -405,23 +563,11 @@
       }
     }
 
-    function showError(message) {
-      const container = document.getElementById("requestsContainer");
-      container.innerHTML = `
-        <div class="error-message" style="text-align:center; padding: 1rem; color: var(--danger-color);">
-          <span class="material-icons" style="vertical-align: middle;">error</span>
-          <p style="display:inline-block; margin-left: 0.5rem;">${message}</p>
-        </div>
-      `;
-    }
-
     async function openAttachmentsModal(requestId) {
-      // Open the attachments modal and fetch files for the request
       const modal = document.getElementById("attachmentsModal");
       const attachmentsList = document.getElementById("attachmentsList");
       attachmentsList.innerHTML = '<li>Loading attachments...</li>';
       modal.style.display = "flex";
-
       try {
         const response = await fetch(`http://localhost:3000/requests/${requestId}/files`, {
           headers: {
@@ -445,8 +591,22 @@
       }
     }
 
+    function showError(message) {
+      const container = document.getElementById("requestsContainer");
+      container.innerHTML = `
+          <div class="error-message" style="text-align:center; padding: 1rem; color: var(--danger-color);">
+            <span class="material-icons" style="vertical-align: middle;">error</span>
+            <p style="display:inline-block; margin-left: 0.5rem;">${message}</p>
+          </div>
+        `;
+    }
+
     window.addEventListener("load", fetchLecturerRequests);
   </script>
+
+  <!-- Bootstrap Bundle with Popper -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+    crossorigin="anonymous"></script>
 </body>
 
 </html>
