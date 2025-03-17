@@ -91,11 +91,14 @@
       background: #020167;
       color: #fff;
       cursor: pointer;
-      transition: background 0.3s ease;
+      transition: 0.5s ease;
     }
 
     form button:hover {
-      background: #010f47;
+      border: 1.2px solid #010f47;
+      background-color: white;
+      /* transform: scale(1.5%); */
+      color: #010f47;
     }
 
     .error-message {
@@ -146,6 +149,7 @@
         <input type="email" id="email" placeholder="Enter your email" required>
         <label for="password">Password</label>
         <input type="password" id="password" placeholder="Enter your password" required>
+        <p>Dont have an account? <a href="/sign-up">Sign Up</a></p>
         <button type="submit" id="loginButton">Login</button>
       </form>
       <div id="errorMessage" class="error-message"></div>

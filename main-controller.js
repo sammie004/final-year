@@ -232,7 +232,7 @@ app.post("/upload", upload, (req, res) => {
   const fileName = `${Date.now()}_${req.file.originalname}`;
   const blob = bucket.file(fileName);
   const blobStream = blob.createWriteStream({
-    metadata: { contentType: req.file.mimetype },
+    metadata: { contentType: req.file.mimetype }
   });
   blobStream.on("error", (err) => {
     console.error("Error uploading file:", err);

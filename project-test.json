@@ -1,0 +1,204 @@
+{
+  "name": "Project API Test Collection",
+  "version": "1.0.0",
+  "requests": [
+    {
+      "name": "TC-001: Sign Up Valid",
+      "url": "http://localhost:3000/sign-up",
+      "method": "POST",
+      "headers": [{ "name": "Content-Type", "value": "application/json" }],
+      "body": {
+        "type": "json",
+        "content": "{\n  \"username\": \"testuser\",\n  \"email\": \"test@example.com\",\n  \"password\": \"Test123!\",\n  \"role\": \"student\",\n  \"department\": \"Computer Science\"\n}"
+      }
+    },
+    {
+      "name": "TC-002: Sign Up Duplicate",
+      "url": "http://localhost:3000/sign-up",
+      "method": "POST",
+      "headers": [{ "name": "Content-Type", "value": "application/json" }],
+      "body": {
+        "type": "json",
+        "content": "{\n  \"username\": \"testuser\",\n  \"email\": \"test@example.com\",\n  \"password\": \"Test123!\",\n  \"role\": \"student\",\n  \"department\": \"Computer Science\"\n}"
+      }
+    },
+    {
+      "name": "TC-003: Sign Up Missing Fields",
+      "url": "http://localhost:3000/sign-up",
+      "method": "POST",
+      "headers": [{ "name": "Content-Type", "value": "application/json" }],
+      "body": {
+        "type": "json",
+        "content": "{\n  \"username\": \"\",\n  \"email\": \"\",\n  \"password\": \"\",\n  \"role\": \"student\",\n  \"department\": \"\"\n}"
+      }
+    },
+    {
+      "name": "TC-004: Login Valid",
+      "url": "http://localhost:3000/login",
+      "method": "POST",
+      "headers": [{ "name": "Content-Type", "value": "application/json" }],
+      "body": {
+        "type": "json",
+        "content": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"Test123!\"\n}"
+      }
+    },
+    {
+      "name": "TC-005: Login Invalid Credentials",
+      "url": "http://localhost:3000/login",
+      "method": "POST",
+      "headers": [{ "name": "Content-Type", "value": "application/json" }],
+      "body": {
+        "type": "json",
+        "content": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"WrongPass!\"\n}"
+      }
+    },
+    {
+      "name": "TC-006: Valid File Upload",
+      "url": "http://localhost:3000/upload",
+      "method": "POST",
+      "headers": [{ "name": "Content-Type", "value": "multipart/form-data" }],
+      "body": {
+        "type": "formdata",
+        "form": [
+          {
+            "name": "file",
+            "value": "",
+            "type": "file"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TC-007: File Upload No File",
+      "url": "http://localhost:3000/upload",
+      "method": "POST",
+      "headers": [{ "name": "Content-Type", "value": "multipart/form-data" }],
+      "body": {
+        "type": "formdata",
+        "form": []
+      }
+    },
+    {
+      "name": "TC-008: File Upload Invalid File Type",
+      "url": "http://localhost:3000/upload",
+      "method": "POST",
+      "headers": [{ "name": "Content-Type", "value": "multipart/form-data" }],
+      "body": {
+        "type": "formdata",
+        "form": [
+          {
+            "name": "file",
+            "value": "",
+            "type": "file",
+            "fileName": "test.exe"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TC-010: Access Protected Route with Valid Token",
+      "url": "http://localhost:3000/registrar-requests",
+      "method": "GET",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer <VALID_JWT_TOKEN>" }
+      ]
+    },
+    {
+      "name": "TC-011: Access Protected Route with Wrong Role",
+      "url": "http://localhost:3000/registrar-requests",
+      "method": "GET",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer <TOKEN_WITH_WRONG_ROLE>" }
+      ]
+    },
+    {
+      "name": "TC-012: Access Protected Route without Token",
+      "url": "http://localhost:3000/registrar-requests",
+      "method": "GET",
+      "headers": []
+    },
+    {
+      "name": "TC-013: Submit Valid Request for Result Upload",
+      "url": "http://localhost:3000/request-upload",
+      "method": "POST",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer <VALID_JWT_TOKEN>" }
+      ],
+      "body": {
+        "type": "json",
+        "content": "{\n  \"courseCode\": \"CS101\",\n  \"courseTitle\": \"Intro to Computer Science\",\n  \"levelTaken\": \"100\",\n  \"studentId\": \"123\",\n  \"additionalInfo\": \"Need urgent upload\"\n}"
+      }
+    },
+    {
+      "name": "TC-014: Submit Request with Missing Fields",
+      "url": "http://localhost:3000/request-upload",
+      "method": "POST",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer <VALID_JWT_TOKEN>" }
+      ],
+      "body": {
+        "type": "json",
+        "content": "{\n  \"courseCode\": \"\",\n  \"courseTitle\": \"\",\n  \"levelTaken\": \"\",\n  \"studentId\": \"\",\n  \"additionalInfo\": \"\"\n}"
+      }
+    },
+    {
+      "name": "TC-015: SQL Injection Attempt in Request Submission",
+      "url": "http://localhost:3000/request-upload",
+      "method": "POST",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer <VALID_JWT_TOKEN>" }
+      ],
+      "body": {
+        "type": "json",
+        "content": "{\n  \"courseCode\": \"CS101'; DROP TABLE users;--\",\n  \"courseTitle\": \"Injection Test\",\n  \"levelTaken\": \"100\",\n  \"studentId\": \"123\",\n  \"additionalInfo\": \"Test SQL Injection\"\n}"
+      }
+    },
+    {
+      "name": "TC-016: Lecturer Approves a Request",
+      "url": "http://localhost:3000/requests/1/approve",
+      "method": "PATCH",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer <TOKEN_FOR_LECTURER>" }
+      ],
+      "body": {
+        "type": "json",
+        "content": "{}"
+      }
+    },
+    {
+      "name": "TC-017: Lecturer Rejects a Request",
+      "url": "http://localhost:3000/requests/1/reject",
+      "method": "PATCH",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer <TOKEN_FOR_LECTURER>" }
+      ],
+      "body": {
+        "type": "json",
+        "content": "{ \"rejectionReason\": \"Incomplete details provided\" }"
+      }
+    },
+    {
+      "name": "TC-020: Verify Expired Token Access",
+      "url": "http://localhost:3000/protected-endpoint",
+      "method": "GET",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer <EXPIRED_TOKEN>" }
+      ]
+    },
+    {
+      "name": "TC-026: XSS Attack Attempt",
+      "url": "http://localhost:3000/sign-up",
+      "method": "POST",
+      "headers": [{ "name": "Content-Type", "value": "application/json" }],
+      "body": {
+        "type": "json",
+        "content": "{\n  \"username\": \"<script>alert('XSS')</script>\",\n  \"email\": \"xss@example.com\",\n  \"password\": \"Test123!\",\n  \"role\": \"student\",\n  \"department\": \"Computer Science\"\n}"
+      }
+    }
+  ]
+}
